@@ -8,28 +8,47 @@ This is a full stack project that contains:
 - a simple, user-friendly user interface.
 
 ## Tech Stack
-- Frontend: Next.js
+- Frontend: React 
 - Backend: FastAPI
 - Database: Google Firebase
 - Scraper: Selenium
 
 ## Repo Structure 
 ```
-project-root/
-├── README.md            # Main project documentation and setup instructions
-├── design-choices.md    # Document explaining design choices and time spent
-├── ai-prompts.md        # Documentation of AI tools used (as required)
-├── backend/             # FastAPI backend and scraper
-│   ├── scraper/         # Selenium scraping code
-│   ├── database/        # Database models and connections
-│   ├── api/             # FastAPI routes
-│   ├── requirements.txt # Python dependencies
-│   └── README.md        # Backend-specific instructions
-├── frontend/            # React frontend
-│   ├── src/             # React components
-│   ├── package.json     # JavaScript dependencies
-│   └── README.md        # Frontend-specific instructions
-└── docker-compose.yml   # (Optional) For easy setup and demonstration
+remoteJobBank/
+├── README.md                # Main project documentation and setup instructions
+├── design-choices.md        # Document explaining design choices and time spent
+├── ai-prompts.md            # Documentation of AI tools used
+├── docker-compose.yml       # For easy setup and demonstration
+│
+├── backend/                 # FastAPI backend and scraper
+│   ├── README.md            # Backend-specific instructions
+│   ├── requirements.txt     # Python dependencies
+│   ├── main.py              # FastAPI application entry point
+│   ├── scraper/             # Selenium scraping code
+│   │   └── scraper.py       # Main scraper implementation
+│   │
+│   ├── database/            # Database models and connections
+│   │   └── firebase.py      # Firebase connection and operations
+│   │
+│   └── api/                 # FastAPI routes
+│       └── routes.py        # API endpoints
+│
+└── frontend/                # React frontend
+    ├── README.md            # Frontend-specific instructions
+    ├── package.json         # JavaScript dependencies
+    ├── public/              # Static assets
+    │   └── index.html       # HTML entry point
+    │
+    └── src/                 # React source code
+        ├── index.js         # JavaScript entry point
+        ├── App.js           # Main application component
+        ├── components/      # Reusable UI components
+        │   ├── JobCard.jsx  # Job listing component
+        │   └── JobFilter.jsx# Filtering component
+        │
+        └── services/        # API client
+            └── api.js       # Backend API integration
 ```
 
 
