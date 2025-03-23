@@ -150,8 +150,8 @@ def extract_region(driver):
             region_boxes = driver.find_elements(By.CSS_SELECTOR, ".box--region")
             for box in region_boxes:
                 regions.append(box.text.strip())
-    except Exception as e:
-        print(f"Error extracting regions: {e}")
+    except Exception:
+        pass  # Silently handle extraction errors
     
     return regions
 
@@ -172,8 +172,8 @@ def extract_salary(driver):
         if salary_elements:
             return salary_elements[0].text.strip()
             
-    except Exception as e:
-        print(f"Error extracting salary: {e}")
+    except Exception:
+        pass  # Silently handle extraction errors
     
     return ""  # Return empty string if no salary found
 
@@ -195,8 +195,8 @@ def extract_countries(driver):
             country_boxes = driver.find_elements(By.XPATH, "//li[contains(text(), 'Country')]//span[contains(@class, 'box--blue')]")
             for box in country_boxes:
                 countries.append(box.text.strip())
-    except Exception as e:
-        print(f"Error extracting countries: {e}")
+    except Exception:
+        pass  # Silently handle extraction errors
     
     return countries
 
@@ -218,8 +218,8 @@ def extract_skills(driver):
             skill_boxes = driver.find_elements(By.XPATH, "//li[contains(text(), 'Skills')]//span[contains(@class, 'box--blue')]")
             for box in skill_boxes:
                 skills.append(box.text.strip())
-    except Exception as e:
-        print(f"Error extracting skills: {e}")
+    except Exception:
+        pass  # Silently handle extraction errors
     
     return skills
 
@@ -241,8 +241,8 @@ def extract_timezones(driver):
             timezone_boxes = driver.find_elements(By.XPATH, "//li[contains(text(), 'Timezones')]//span[contains(@class, 'box--blue')]")
             for box in timezone_boxes:
                 timezones.append(box.text.strip())
-    except Exception as e:
-        print(f"Error extracting timezones: {e}")
+    except Exception:
+        pass  # Silently handle extraction errors
     
     return timezones
 
@@ -257,7 +257,6 @@ def extract_job_data(url, driver):
                 EC.presence_of_element_located((By.CLASS_NAME, 'listing-header-container'))
             )
         except TimeoutException:
-            print(f"Timeout waiting for page to load: {url}")
             # Try an alternative selector
             WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, '.lis-container'))
@@ -266,8 +265,6 @@ def extract_job_data(url, driver):
         # Try to extract structured JSON data first
         json_data = check_for_json_data(driver)
         if json_data and isinstance(json_data, dict):
-            # Use the JSON data to build our job object
-            print("Found structured JSON data on the page")
             return process_json_job_data(json_data, url, driver)
         
         # Fall back to direct Selenium extraction if no JSON is found
@@ -322,10 +319,10 @@ def extract_job_data(url, driver):
         
         return job_data
     except (TimeoutException, NoSuchElementException, WebDriverException) as e:
-        print(f"Error scraping {url}: {e}")
+        print(f"❌ Error scraping {url}: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error processing {url}: {e}")
+        print(f"❌ Unexpected error processing {url}: {e}")
         return None
 
 def process_json_job_data(json_data, url, existing_driver=None):
@@ -394,7 +391,7 @@ def process_json_job_data(json_data, url, existing_driver=None):
                 job_data['apply_url'] = url
         
     except Exception as e:
-        print(f"Error extracting additional info: {e}")
+        print(f"❌ Error extracting additional info: {e}")
     finally:
         if driver and need_to_quit_driver:
             driver.quit()
@@ -417,8 +414,7 @@ def save_to_firestore(job_data, dry_run=False):
         doc_id = job_data['job_id']
         
         if dry_run:
-            print("🚨 Dry Run: Would NOT save to Firestore:")
-            pprint.pprint(job_data, indent=2)
+            print(f"🚨 Dry Run: Would save job {doc_id}")
             return True
         
         # Document existence should already be checked before this function is called
@@ -426,13 +422,13 @@ def save_to_firestore(job_data, dry_run=False):
         doc_ref = db.collection('jobs').document(doc_id)
         if not doc_ref.get().exists:
             doc_ref.set(job_data)
-            print(f"Saved new job: {doc_id}")
+            print(f"✅ Saved job: {doc_id}")
             return True
         else:
-            print(f"Job already exists: {doc_id}")
+            print(f"⏩ Job already exists: {doc_id}")
             return False
     except Exception as e:
-        print(f"Firestore error: {e}")
+        print(f"❌ Firestore error: {e}")
         return False
 
 def test_scrape(test_urls=None, dry_run=False):
@@ -441,7 +437,6 @@ def test_scrape(test_urls=None, dry_run=False):
     Usage: test_scrape(["https://example.com/job"], dry_run=True)
     """
     driver = get_driver()
-    pp = pprint.PrettyPrinter(indent=2)
     
     if not test_urls:
         test_urls = [
@@ -452,11 +447,10 @@ def test_scrape(test_urls=None, dry_run=False):
         ]
     
     try:
-        print(f"\n{' DRY RUN ' if dry_run else ''} Starting test with {len(test_urls)} URLs")
+        print(f"\n{'🚨 DRY RUN' if dry_run else '🔍 TEST RUN'} with {len(test_urls)} URLs")
         
         for i, url in enumerate(test_urls, 1):
-            print(f"\n--- Processing URL {i}/{len(test_urls)} ---")
-            print(f"URL: {url}")
+            print(f"\n[{i}/{len(test_urls)}] Processing: {url}")
             
             # Initialize start_time before the try block
             start_time = time.time()
@@ -465,49 +459,43 @@ def test_scrape(test_urls=None, dry_run=False):
                 # Extract job_id from URL first
                 parsed_url = urlparse(url)
                 job_id = parsed_url.path.split('/')[-1]
-                print(f"Job ID: {job_id}")
                 
                 # Check if job already exists in database to avoid unnecessary processing
                 if not dry_run and exists_in_firestore(job_id):
-                    print(f"⏩ Skipping - Job {job_id} already exists in database")
+                    print(f"⏩ Skipping - Job {job_id} already exists")
                     continue
                 
                 # Extraction
+                print(f"Extracting job data...")
                 raw_data = extract_job_data(url, driver)
                 
                 if not raw_data:
                     print("❌ No data extracted")
                     continue
                 
-                # Print raw data
-                print("\nRaw extracted data:")
-                pp.pprint(raw_data)
+                print(f"✅ Data extracted: {raw_data['title']} @ {raw_data['company']}")
                 
                 # Validation
                 try:
                     validated_data = validate_job_data(raw_data)
-                    validation_time = time.time() - start_time
-                    print(f"\n✅ Validated in {validation_time:.2f}s")
-                    print("Validated data:")
-                    pp.pprint(validated_data)
+                    print(f"✅ Data validated")
                 except ValueError as e:
-                    print(f"\n❌ Validation failed: {e}")
+                    print(f"❌ Validation failed: {e}")
                     continue
                 
                 # Saving
                 if not dry_run:
-                    save_success = save_to_firestore(validated_data)
-                    print(f"💾 Save {'succeeded' if save_success else 'failed'}")
+                    save_to_firestore(validated_data)
                 else:
                     save_to_firestore(validated_data, dry_run=True)
                 
             except Exception as e:
-                print(f"\n⚠️ Unexpected error: {str(e)}")
+                print(f"❌ Error: {str(e)}")
                 continue
                 
             finally:
                 elapsed_time = time.time() - start_time
-                print(f"⏱ Total processing time: {elapsed_time:.2f}s")
+                print(f"⏱ Time: {elapsed_time:.2f}s")
             
             # Add a small delay between requests
             time.sleep(1)
@@ -521,9 +509,10 @@ def main():
     driver = get_driver()
     
     try:
+        print("🔍 Fetching job URLs from sitemap...")
         sitemap_url = "https://weworkremotely.com/sitemap.xml"
         job_urls = parse_sitemap(sitemap_url)
-        print(f"Found {len(job_urls)} job URLs")
+        print(f"📋 Found {len(job_urls)} job URLs")
         
         # Track progress
         successful = 0
@@ -531,8 +520,6 @@ def main():
         skipped = 0
         
         for i, url in enumerate(job_urls, 1):
-            print(f"\nProcessing URL {i}/{len(job_urls)}: {url}")
-            
             # Initialize start_time at the beginning of each iteration
             start_time = time.time()
             
@@ -543,11 +530,9 @@ def main():
                 
                 # Check if job already exists in database
                 if exists_in_firestore(job_id):
-                    print(f"⏩ Skipping - Job {job_id} already exists in database")
                     skipped += 1
-                    # Calculate time even for skipped jobs
-                    elapsed_time = time.time() - start_time
-                    print(f"⏱ Skipping time: {elapsed_time:.2f}s")
+                    if i % 10 == 0 or i == 1 or i == len(job_urls):
+                        print(f"[{i}/{len(job_urls)}] ⏩ Skipped: {job_id}")
                     continue
                     
                 # Process the job only if it doesn't exist
@@ -557,37 +542,41 @@ def main():
                         validated_data = validate_job_data(raw_data)
                         if save_to_firestore(validated_data):
                             successful += 1
+                            if i % 10 == 0 or i == 1 or i == len(job_urls):
+                                print(f"[{i}/{len(job_urls)}] ✅ Saved: {raw_data['title']} @ {raw_data['company']}")
                         else:
                             # This should rarely happen since we check existence first
                             skipped += 1
                     except ValueError as e:
-                        print(f"Skipping invalid job data: {e}")
+                        print(f"[{i}/{len(job_urls)}] ❌ Invalid job data: {e}")
                         failed += 1
                     except Exception as e:
-                        print(f"Unexpected error validating data: {e}")
+                        print(f"[{i}/{len(job_urls)}] ❌ Error validating: {e}")
                         failed += 1
                 else:
                     failed += 1
+                    print(f"[{i}/{len(job_urls)}] ❌ Failed to extract: {url}")
                     
             except Exception as e:
-                print(f"Error processing {url}: {e}")
+                print(f"[{i}/{len(job_urls)}] ❌ Error: {e}")
                 failed += 1
                 
             finally:
-                # Calculate and print elapsed time for all jobs
-                elapsed_time = time.time() - start_time
-                print(f"⏱ Total processing time: {elapsed_time:.2f}s")
+                # Only print timing for non-skipped jobs to reduce output
+                if i % 10 == 0 or i == 1 or i == len(job_urls):
+                    elapsed_time = time.time() - start_time
+                    print(f"⏱ Time: {elapsed_time:.2f}s")
                 
             # Add a small delay between requests to be respectful
             time.sleep(3)
             
             # Periodic status update
-            if i % 10 == 0:
-                print(f"\n--- Progress: {i}/{len(job_urls)} URLs processed. Success: {successful}, Failed: {failed}, Skipped: {skipped} ---\n")
+            if i % 50 == 0:
+                print(f"\n--- Progress: {i}/{len(job_urls)} URLs | ✅ Success: {successful} | ❌ Failed: {failed} | ⏩ Skipped: {skipped} ---\n")
                 
     finally:
         driver.quit()
-        print(f"\nScraping completed. Processed {len(job_urls)} URLs. Success: {successful}, Failed: {failed}, Skipped: {skipped}")
+        print(f"\n🏁 Scraping completed: ✅ Success: {successful} | ❌ Failed: {failed} | ⏩ Skipped: {skipped}")
 
 if __name__ == "__main__":
     import argparse
