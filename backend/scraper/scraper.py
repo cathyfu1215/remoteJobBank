@@ -96,12 +96,10 @@ def extract_job_data(url, driver):
             'company': soup.select_one('.lis-container__job__sidebar__companyDetails__info__title h3').get_text(strip=True) if soup.select_one('.lis-container__job__sidebar__companyDetails__info__title h3') else '',
             'company_about': soup.select_one('.lis-container__header__hero__company-info__description').get_text(strip=True) if soup.select_one('.lis-container__header__hero__company-info__description') else '',
             'apply_url': soup.select_one('#job-cta-alt')['href'] if soup.select_one('#job-cta-alt') else '',
-            
-            'posted_on': soup.find('time').get('datetime') if soup.find('time') else '',
-            'apply_before': soup.find('span', class_='deadline').get_text(strip=True) if soup.find('span', class_='deadline') else '',
-            'job_description': soup.find('div', id='job-description').get_text(strip=True),
-            'category': category,
-            'region': soup.find('h3', class_='location').get_text(strip=True) if soup.find('h3', class_='location') else 'Remote',
+            'apply_before': soup.select_one('.lis-container__job__sidebar__job-about__list__item span').get_text(strip=True) if soup.select_one('.lis-container__job__sidebar__job-about__list__item span') else '',
+            'job_description': soup.select_one('.lis-container__job__content__description').get_text("\n", strip=True) if soup.select_one('.lis-container__job__content__description') else '',
+            'category': soup.select_one('.lis-container__header__navigation__tab--category').get_text(strip=True) if soup.select_one('.lis-container__header__navigation__tab--category') else 'All Other Remote Jobs',
+            'region': soup.select_one('.box--region').get_text(strip=True) if soup.select_one('.box--region') else 'Remote',
             
             # Optional fields with defaults
             'salary_range': soup.find('li', class_='salary').get_text(strip=True) if soup.find('li', class_='salary') else 'Not Specified',

@@ -13,7 +13,7 @@ ALLOWED_CATEGORIES = {
     "All Other Remote Jobs"
 }
 
-REQUIRED_FIELDS = ['job_id', 'title', 'company', 'company_about', 'apply_url', 'posted_on', 'apply_before', 'job_description', 'category', 'region']
+REQUIRED_FIELDS = ['job_id', 'title', 'company', 'company_about', 'apply_url', 'apply_before', 'job_description', 'category', 'region']
 
 def validate_job_data(job_data):
     # Check required fields
