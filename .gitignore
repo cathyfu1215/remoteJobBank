@@ -173,3 +173,12 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/package-lock.json
+frontend/yarn.lock
+frontend/yarn-error.log
