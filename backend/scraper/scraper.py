@@ -102,10 +102,10 @@ def extract_job_data(url, driver):
             'region': soup.select_one('.box--region').get_text(strip=True) if soup.select_one('.box--region') else 'Remote',
             
             # Optional fields with defaults
-            'salary_range': soup.find('li', class_='salary').get_text(strip=True) if soup.find('li', class_='salary') else 'Not Specified',
-            'countries': [c.get_text(strip=True) for c in soup.select('.country-list li')],
-            'skills': [s.get_text(strip=True) for s in soup.select('.skills-list li')],
-            'timezones': [t.get_text(strip=True) for t in soup.select('.timezone-list li')],
+            'salary_range': soup.select_one('.box--blue').get_text(strip=True) if soup.select_one('.box--blue') else 'Not Specified',
+            'countries': [c.get_text(strip=True) for c in soup.select('.lis-container__job__sidebar__job-about__list__item--full .box--blue')],
+            'skills': [s.get_text(strip=True) for s in soup.select('.lis-container__job__sidebar__job-about__list__item--full .box--blue')],
+            'timezones': [t.get_text(strip=True) for t in soup.select('.lis-container__job__sidebar__job-about__list__item--full .box--blue')],
             
             # Metadata
             'url': url,
