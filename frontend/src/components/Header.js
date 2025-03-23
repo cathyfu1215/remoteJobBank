@@ -1,4 +1,5 @@
 import React from 'react';
+import ThemeToggle from './ThemeToggle';
 import './Header.css';
 
 function Header() {
@@ -10,6 +11,7 @@ function Header() {
         </div>
         <div className="header-right">
           <p>Find your next remote job</p>
+          <ThemeToggle />
         </div>
       </div>
     </header>

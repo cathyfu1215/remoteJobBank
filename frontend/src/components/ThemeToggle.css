@@ -1,0 +1,47 @@
+.theme-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(15deg);
+}
+
+.moon-icon, .sun-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle-btn:hover .moon-icon,
+.theme-toggle-btn:hover .sun-icon {
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .theme-toggle-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  
+  .moon-icon, .sun-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+} 

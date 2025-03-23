@@ -82,49 +82,47 @@ function App() {
       <Header />
       
       <main className="container">
-        <div className="content-wrapper">
-          <FilterPanel 
-            categories={categories} 
-            onFilterChange={handleFilterChange}
-            onClearFilters={clearFilters}
-            activeFilter={filter}
-          />
+        <FilterPanel 
+          categories={categories} 
+          onFilterChange={handleFilterChange}
+          onClearFilters={clearFilters}
+          activeFilter={filter}
+        />
+        
+        <div className="main-content">
+          {error && <div className="error-message">{error}</div>}
           
-          <div className="main-content">
-            {error && <div className="error-message">{error}</div>}
-            
-            {loading ? (
-              <Loading />
-            ) : (
-              <>
-                <div className="results-info">
-                  {filter.type && filter.value ? (
-                    <p>Showing results for {filter.type}: <strong>{filter.value}</strong></p>
-                  ) : (
-                    <p>Showing all remote jobs</p>
-                  )}
-                  <p>{totalJobs} jobs found</p>
-                </div>
-                
-                {jobs.length === 0 ? (
-                  <div className="no-results">
-                    <h3>No jobs found</h3>
-                    <p>Try adjusting your filters or search for something else.</p>
-                    <button onClick={clearFilters} className="btn">Clear all filters</button>
-                  </div>
+          {loading ? (
+            <Loading />
+          ) : (
+            <>
+              <div className="results-info">
+                {filter.type && filter.value ? (
+                  <p>Showing results for {filter.type}: <strong>{filter.value}</strong></p>
                 ) : (
-                  <>
-                    <JobList jobs={jobs} />
-                    <Pagination 
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                    />
-                  </>
+                  <p>Showing all remote jobs</p>
                 )}
-              </>
-            )}
-          </div>
+                <p>{totalJobs} jobs found</p>
+              </div>
+              
+              {jobs.length === 0 ? (
+                <div className="no-results">
+                  <h3>No jobs found</h3>
+                  <p>Try adjusting your filters or search for something else.</p>
+                  <button onClick={clearFilters} className="btn">Clear all filters</button>
+                </div>
+              ) : (
+                <>
+                  <JobList jobs={jobs} />
+                  <Pagination 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>
