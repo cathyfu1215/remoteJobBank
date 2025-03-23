@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import requests
 from datetime import datetime
 from urllib.parse import urlparse
@@ -10,14 +11,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
-from bs4 import BeautifulSoup
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException, StaleElementReferenceException
 import firebase_admin
 from firebase_admin import credentials, firestore
 from pathlib import Path
-from schema import validate_job_data  
+from schema import validate_job_data
 import pprint
-
+import re
 
 # Load environment variables from .env file
 dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
@@ -30,15 +30,17 @@ firebase_cred = {
     "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
     "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
     "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.getenv("FIREBASE_CLIENT_ID"),
+    "client_id": os.getenv("FIREBASE_CLIENT_ID"), 
     "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
     "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
     "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
     "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL")
 }
 
-cred = credentials.Certificate(firebase_cred)
-firebase_admin.initialize_app(cred)
+# Initialize Firebase if not already initialized
+if not firebase_admin._apps:
+    cred = credentials.Certificate(firebase_cred)
+    firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # Configure Chrome options for headless mode
@@ -47,71 +49,246 @@ chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--window-size=1920,1080")
 
 def get_driver():
     return webdriver.Chrome(options=chrome_options)
 
 def parse_sitemap(url):
+    """Parse XML sitemap to extract job URLs"""
     job_urls = []
     try:
         response = requests.get(url, timeout=10)
         root = ElementTree.fromstring(response.content)
         
+        # Define namespace if present in the XML
+        ns = {'ns': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+        
+        # Check for nested sitemaps
         for child in root:
-            if 'sitemap' in child.tag:
-                loc = child[0].text
-                if 'job-sitemap' in loc:
-                    job_urls.extend(parse_sitemap(loc))
-            elif 'loc' in child.tag:
-                job_urls.append(child.text)
+            tag_name = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+            
+            if tag_name == 'sitemap':
+                loc_element = child.find('.//ns:loc' if ns else './/loc', ns)
+                if loc_element is not None and 'job-sitemap' in loc_element.text:
+                    job_urls.extend(parse_sitemap(loc_element.text))
+            elif tag_name == 'url':
+                loc_element = child.find('.//ns:loc' if ns else './/loc', ns)
+                if loc_element is not None and '/remote-jobs/' in loc_element.text:
+                    job_urls.append(loc_element.text)
         
         return job_urls
     except Exception as e:
         print(f"Error parsing sitemap: {e}")
         return []
 
+def check_for_json_data(driver):
+    """Try to find and extract any structured JSON data on the page"""
+    try:
+        # Look for script tags with type="application/ld+json"
+        script_elements = driver.find_elements(By.XPATH, "//script[@type='application/ld+json']")
+        for script in script_elements:
+            try:
+                json_content = json.loads(script.get_attribute('innerHTML'))
+                if isinstance(json_content, dict) and '@type' in json_content:
+                    if json_content['@type'] == 'JobPosting':
+                        return json_content
+            except (json.JSONDecodeError, StaleElementReferenceException):
+                continue
+                
+        # Look for JSON data in other script tags
+        script_elements = driver.find_elements(By.TAG_NAME, "script")
+        for script in script_elements:
+            try:
+                script_text = script.get_attribute('innerHTML')
+                # Look for objects that might be job data
+                match = re.search(r'window\.jobData\s*=\s*({.*?});', script_text, re.DOTALL)
+                if match:
+                    return json.loads(match.group(1))
+            except (json.JSONDecodeError, StaleElementReferenceException):
+                continue
+                
+        return None
+    except Exception as e:
+        print(f"Error extracting JSON data: {e}")
+        return None
+
+def get_text_safely(driver, selector, wait_time=5):
+    """Safely extract text from an element using explicit wait"""
+    try:
+        element = WebDriverWait(driver, wait_time).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+        )
+        return element.text.strip()
+    except (TimeoutException, NoSuchElementException, StaleElementReferenceException):
+        return ""
+
+def get_elements_safely(driver, selector, wait_time=5):
+    """Safely get multiple elements using explicit wait"""
+    try:
+        WebDriverWait(driver, wait_time).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+        )
+        return driver.find_elements(By.CSS_SELECTOR, selector)
+    except (TimeoutException, NoSuchElementException):
+        return []
+
+def extract_region(driver):
+    """Extract region information"""
+    try:
+        # Look for list item containing "Region"
+        region_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Region')]")
+        
+        if region_items:
+            region_element = region_items[0].find_element(By.CSS_SELECTOR, ".box--region")
+            if region_element:
+                return region_element.text.strip()
+        
+        # Fallback method - direct search for region box
+        region_box = driver.find_element(By.CSS_SELECTOR, ".box--region")
+        if region_box:
+            return region_box.text.strip()
+    except:
+        pass
+    
+    return "Remote"  # Default value
+
+def extract_countries(driver):
+    """Extract countries from the job listing"""
+    countries = []
+    try:
+        # Look for list item containing "Country"
+        country_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Country')]")
+        
+        if country_items:
+            country_boxes = country_items[0].find_elements(By.CSS_SELECTOR, ".box--blue")
+            for box in country_boxes:
+                countries.append(box.text.strip())
+        
+        # If no countries found with the above method, try alternative approach
+        if not countries:
+            # Try another selector pattern
+            country_boxes = driver.find_elements(By.XPATH, "//li[contains(text(), 'Country')]//span[contains(@class, 'box--blue')]")
+            for box in country_boxes:
+                countries.append(box.text.strip())
+    except Exception as e:
+        print(f"Error extracting countries: {e}")
+    
+    return countries
+
+def extract_skills(driver):
+    """Extract skills from the job listing"""
+    skills = []
+    try:
+        # Look for list item containing "Skills"
+        skill_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Skills')]")
+        
+        if skill_items:
+            skill_boxes = skill_items[0].find_elements(By.CSS_SELECTOR, ".box--blue")
+            for box in skill_boxes:
+                skills.append(box.text.strip())
+                
+        # If no skills found with the above method, try alternative approach
+        if not skills:
+            # Try another selector pattern
+            skill_boxes = driver.find_elements(By.XPATH, "//li[contains(text(), 'Skills')]//span[contains(@class, 'box--blue')]")
+            for box in skill_boxes:
+                skills.append(box.text.strip())
+    except Exception as e:
+        print(f"Error extracting skills: {e}")
+    
+    return skills
+
+def extract_timezones(driver):
+    """Extract timezones from the job listing"""
+    timezones = []
+    try:
+        # Look for list item containing "Timezones"
+        timezone_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Timezones')]")
+        
+        if timezone_items:
+            timezone_boxes = timezone_items[0].find_elements(By.CSS_SELECTOR, ".box--blue")
+            for box in timezone_boxes:
+                timezones.append(box.text.strip())
+                
+        # If no timezones found with the above method, try alternative approach
+        if not timezones:
+            # Try another selector pattern
+            timezone_boxes = driver.find_elements(By.XPATH, "//li[contains(text(), 'Timezones')]//span[contains(@class, 'box--blue')]")
+            for box in timezone_boxes:
+                timezones.append(box.text.strip())
+    except Exception as e:
+        print(f"Error extracting timezones: {e}")
+    
+    return timezones
+
 def extract_job_data(url, driver):
+    """Extract job data using Selenium directly instead of BeautifulSoup"""
     try:
         driver.get(url)
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'listing-header-container')))
         
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        # Wait for the job listing to load
+        try:
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'listing-header-container'))
+            )
+        except TimeoutException:
+            print(f"Timeout waiting for page to load: {url}")
+            # Try an alternative selector
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.lis-container'))
+            )
+        
+        # Try to extract structured JSON data first
+        json_data = check_for_json_data(driver)
+        if json_data and isinstance(json_data, dict):
+            # Use the JSON data to build our job object
+            print("Found structured JSON data on the page")
+            return process_json_job_data(json_data, url, driver)
+        
+        # Fall back to direct Selenium extraction if no JSON is found
         parsed_url = urlparse(url)
+        job_id = parsed_url.path.split('/')[-1]
         
         # Extract category from URL
         category = "All Other Remote Jobs"
         url_parts = parsed_url.path.split('/')
         if len(url_parts) > 2 and url_parts[1] == 'categories':
-            raw_category = '-'.join(url_parts[2].split('-')[1:])  # Handle multi-word categories
-            category = raw_category.title().replace('And', 'and')  # Maintain 'and' lowercase
-            
-        # Extract company info
-        company_section = soup.find('div', class_='company-card')
+            raw_category = '-'.join(url_parts[2].split('-')[1:])
+            category = raw_category.title().replace('And', 'and')
         
-        # Extract main job details
+        # Extract main job details using Selenium
         job_data = {
-            'job_id': parsed_url.path.split('/')[-1],
-            'title': soup.select_one('.lis-container__header__hero__company-info__title').get_text(strip=True) if soup.select_one('.lis-container__header__hero__company-info__title') else '',
-            'company': soup.select_one('.lis-container__job__sidebar__companyDetails__info__title h3').get_text(strip=True) if soup.select_one('.lis-container__job__sidebar__companyDetails__info__title h3') else '',
-            'company_about': soup.select_one('.lis-container__header__hero__company-info__description').get_text(strip=True) if soup.select_one('.lis-container__header__hero__company-info__description') else '',
-            'apply_url': soup.select_one('#job-cta-alt')['href'] if soup.select_one('#job-cta-alt') else '',
-            'apply_before': soup.select_one('.lis-container__job__sidebar__job-about__list__item span').get_text(strip=True) if soup.select_one('.lis-container__job__sidebar__job-about__list__item span') else '',
-            'job_description': soup.select_one('.lis-container__job__content__description').get_text("\n", strip=True) if soup.select_one('.lis-container__job__content__description') else '',
-            'category': soup.select_one('.lis-container__header__navigation__tab--category').get_text(strip=True) if soup.select_one('.lis-container__header__navigation__tab--category') else 'All Other Remote Jobs',
-            'region': soup.select_one('.box--region').get_text(strip=True) if soup.select_one('.box--region') else 'Remote',
+            'job_id': job_id,
+            'title': get_text_safely(driver, '.lis-container__header__hero__company-info__title'),
+            'company': get_text_safely(driver, '.lis-container__job__sidebar__companyDetails__info__title h3'),
+            'company_about': get_text_safely(driver, '.lis-container__header__hero__company-info__description'),
+            'job_description': get_text_safely(driver, '.lis-container__job__content__description'),
+            'category': get_text_safely(driver, '.lis-container__header__navigation__tab--category') or category,
             
-            # Optional fields with defaults
-            'salary_range': soup.select_one('.box--blue').get_text(strip=True) if soup.select_one('.box--blue') else 'Not Specified',
-            'countries': [c.get_text(strip=True) for c in soup.select('.lis-container__job__sidebar__job-about__list__item--full .box--blue')],
-            'skills': [s.get_text(strip=True) for s in soup.select('.lis-container__job__sidebar__job-about__list__item--full .box--blue')],
-            'timezones': [t.get_text(strip=True) for t in soup.select('.lis-container__job__sidebar__job-about__list__item--full .box--blue')],
+            # Extract region from specific element
+            'region': extract_region(driver),
+            
+            # Optional fields with improved extraction
+            'salary_range': get_text_safely(driver, '.box--blue') or 'Not Specified',
+            'countries': extract_countries(driver),
+            'skills': extract_skills(driver),
+            'timezones': extract_timezones(driver),
             
             # Metadata
             'url': url,
             'source': 'WeWorkRemotely',
             'timestamp': firestore.SERVER_TIMESTAMP
         }
+        
+        # Try to get apply URL and deadline
+        try:
+            apply_button = driver.find_element(By.ID, 'job-cta-alt')
+            job_data['apply_url'] = apply_button.get_attribute('href')
+        except NoSuchElementException:
+            job_data['apply_url'] = url
+        
+        job_data['apply_before'] = get_text_safely(driver, '.lis-container__job__sidebar__job-about__list__item span') or 'Not specified'
         
         return job_data
     except (TimeoutException, NoSuchElementException, WebDriverException) as e:
@@ -121,27 +298,88 @@ def extract_job_data(url, driver):
         print(f"Unexpected error processing {url}: {e}")
         return None
 
-def save_to_firestore(job_data, dry_run=False):
+def process_json_job_data(json_data, url, existing_driver=None):
+    """Process structured JSON job data if available"""
+    parsed_url = urlparse(url)
+    job_id = parsed_url.path.split('/')[-1]
+    
+    # Extract data from JSON format - adjust based on actual structure
+    job_data = {
+        'job_id': job_id,
+        'title': json_data.get('title', ''),
+        'company': json_data.get('hiringOrganization', {}).get('name', '') if isinstance(json_data.get('hiringOrganization'), dict) else '',
+        'company_about': '',  # Will extract from page later
+        'apply_url': json_data.get('applicationLink', '') or json_data.get('url', url),
+        'apply_before': json_data.get('validThrough', 'Not specified'),
+        'job_description': json_data.get('description', ''),
+        'category': json_data.get('occupationalCategory', 'All Other Remote Jobs'),
+        'region': '',  # Will extract from page
+        
+        # Optional fields that will be extracted from the page
+        'salary_range': f"{json_data.get('baseSalary', {}).get('value', 'Not Specified')} {json_data.get('baseSalary', {}).get('currency', '')}" 
+                    if isinstance(json_data.get('baseSalary'), dict) else 'Not Specified',
+        'countries': [],
+        'skills': [],
+        'timezones': [],
+        
+        # Metadata
+        'url': url,
+        'source': 'WeWorkRemotely',
+        'timestamp': firestore.SERVER_TIMESTAMP
+    }
+    
+    # Since JSON data doesn't reliably contain all information we need,
+    # we'll extract additional information from the page
+    driver = existing_driver
+    need_to_quit_driver = False
+    
     try:
-        parsed_url = urlparse(job_data['url'])
-        doc_id = parsed_url.path.split('/')[-1]
+        if not driver:
+            driver = get_driver()
+            need_to_quit_driver = True
+            driver.get(url)
+            # Wait for the job information to load
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.lis-container'))
+            )
+        
+        # Extract additional information from the page
+        job_data['company_about'] = get_text_safely(driver, '.lis-container__header__hero__company-info__description')
+        job_data['region'] = extract_region(driver)
+        job_data['countries'] = extract_countries(driver)
+        job_data['skills'] = extract_skills(driver)
+        job_data['timezones'] = extract_timezones(driver)
+        
+    except Exception as e:
+        print(f"Error extracting additional info: {e}")
+    finally:
+        if driver and need_to_quit_driver:
+            driver.quit()
+    
+    return job_data
+
+def save_to_firestore(job_data, dry_run=False):
+    """Save job data to Firestore, avoiding duplicates"""
+    try:
+        doc_id = job_data['job_id']
         
         if dry_run:
             print("🚨 Dry Run: Would NOT save to Firestore:")
             pprint.pprint(job_data, indent=2)
             return True
         
+        # Check if document already exists
         doc_ref = db.collection('jobs').document(doc_id)
         if not doc_ref.get().exists:
             doc_ref.set(job_data)
             print(f"Saved new job: {doc_id}")
+            return True
         else:
             print(f"Job already exists: {doc_id}")
-        return True
+            return False
     except Exception as e:
         print(f"Firestore error: {e}")
         return False
-
 
 def test_scrape(test_urls=None, dry_run=False):
     """
@@ -202,38 +440,63 @@ def test_scrape(test_urls=None, dry_run=False):
                 continue
                 
             finally:
-                print(f"⏱ Total processing time: {time.time() - start_time:.2f}s")
+                elapsed_time = time.time() - start_time
+                print(f"⏱ Total processing time: {elapsed_time:.2f}s")
             
+            # Add a small delay between requests
             time.sleep(1)
             
     finally:
         driver.quit()
         print("\n🏁 Test complete")
 
-
 def main():
+    """Main function to scrape all job listings"""
     driver = get_driver()
-
+    
     try:
         sitemap_url = "https://weworkremotely.com/sitemap.xml"
         job_urls = parse_sitemap(sitemap_url)
         print(f"Found {len(job_urls)} job URLs")
         
-        for url in job_urls:
-            raw_data = extract_job_data(url, driver)
-            if raw_data:
-                try:
-                    validated_data = validate_job_data(raw_data)
-                    save_to_firestore(validated_data)
-                except ValueError as e:
-                    print(f"Skipping invalid job data: {e}")
-                except Exception as e:
-                    print(f"Unexpected error validating data: {e}")
+        # Track progress
+        successful = 0
+        failed = 0
+        
+        for i, url in enumerate(job_urls, 1):
+            print(f"\nProcessing URL {i}/{len(job_urls)}: {url}")
+            try:
+                raw_data = extract_job_data(url, driver)
+                if raw_data:
+                    try:
+                        validated_data = validate_job_data(raw_data)
+                        if save_to_firestore(validated_data):
+                            successful += 1
+                        # Still count as successful if already exists
+                        else:
+                            successful += 1
+                    except ValueError as e:
+                        print(f"Skipping invalid job data: {e}")
+                        failed += 1
+                    except Exception as e:
+                        print(f"Unexpected error validating data: {e}")
+                        failed += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                print(f"Error processing {url}: {e}")
+                failed += 1
+                
+            # Add a small delay between requests to be respectful
             time.sleep(3)
             
+            # Periodic status update
+            if i % 10 == 0:
+                print(f"\n--- Progress: {i}/{len(job_urls)} URLs processed. Success: {successful}, Failed: {failed} ---\n")
+                
     finally:
         driver.quit()
-        print("Scraping completed")
+        print(f"\nScraping completed. Processed {len(job_urls)} URLs. Success: {successful}, Failed: {failed}")
 
 if __name__ == "__main__":
     import argparse

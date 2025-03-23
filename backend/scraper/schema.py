@@ -23,7 +23,7 @@ def validate_job_data(job_data):
     
     # Clean and validate category
     category = job_data.get('category', '').strip()
-    job_data['category'] = category if category in ALLOWED_CATEGORIES else 'Other'
+    job_data['category'] = category if category in ALLOWED_CATEGORIES else 'All Other Remote Jobs'
     
     
     # Set defaults for optional fields
