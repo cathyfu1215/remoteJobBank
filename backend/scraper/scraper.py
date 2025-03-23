@@ -134,24 +134,48 @@ def get_elements_safely(driver, selector, wait_time=5):
         return []
 
 def extract_region(driver):
-    """Extract region information"""
+    """Extract region information as a list of regions"""
+    regions = []
     try:
         # Look for list item containing "Region"
         region_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Region')]")
         
         if region_items:
-            region_element = region_items[0].find_element(By.CSS_SELECTOR, ".box--region")
-            if region_element:
-                return region_element.text.strip()
+            region_elements = region_items[0].find_elements(By.CSS_SELECTOR, ".box--region")
+            for element in region_elements:
+                regions.append(element.text.strip())
         
-        # Fallback method - direct search for region box
-        region_box = driver.find_element(By.CSS_SELECTOR, ".box--region")
-        if region_box:
-            return region_box.text.strip()
-    except:
-        pass
+        # Fallback method - direct search for region boxes
+        if not regions:
+            region_boxes = driver.find_elements(By.CSS_SELECTOR, ".box--region")
+            for box in region_boxes:
+                regions.append(box.text.strip())
+    except Exception as e:
+        print(f"Error extracting regions: {e}")
     
-    return "Remote"  # Default value
+    return regions
+
+def extract_salary(driver):
+    """Extract salary information"""
+    try:
+        # Look for list item containing "Salary"
+        salary_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Salary')]")
+        
+        if salary_items:
+            salary_box = salary_items[0].find_element(By.CSS_SELECTOR, ".box--blue")
+            if salary_box:
+                return salary_box.text.strip()
+        
+        # Fallback method - look for salary in other places
+        salary_xpath = "//li[contains(text(), 'Salary')]//span[contains(@class, 'box--blue')]"
+        salary_elements = driver.find_elements(By.XPATH, salary_xpath)
+        if salary_elements:
+            return salary_elements[0].text.strip()
+            
+    except Exception as e:
+        print(f"Error extracting salary: {e}")
+    
+    return ""  # Return empty string if no salary found
 
 def extract_countries(driver):
     """Extract countries from the job listing"""
@@ -266,11 +290,11 @@ def extract_job_data(url, driver):
             'job_description': get_text_safely(driver, '.lis-container__job__content__description'),
             'category': get_text_safely(driver, '.lis-container__header__navigation__tab--category') or category,
             
-            # Extract region from specific element
+            # Extract region as a list
             'region': extract_region(driver),
             
             # Optional fields with improved extraction
-            'salary_range': get_text_safely(driver, '.box--blue') or 'Not Specified',
+            'salary_range': extract_salary(driver),
             'countries': extract_countries(driver),
             'skills': extract_skills(driver),
             'timezones': extract_timezones(driver),
@@ -281,12 +305,18 @@ def extract_job_data(url, driver):
             'timestamp': firestore.SERVER_TIMESTAMP
         }
         
-        # Try to get apply URL and deadline
+        # Try to get apply URL from the correct element
         try:
-            apply_button = driver.find_element(By.ID, 'job-cta-alt')
+            # Updated selector to match the element structure you provided
+            apply_button = driver.find_element(By.CSS_SELECTOR, ".listing-apply-cta__btn #job-cta-alt")
             job_data['apply_url'] = apply_button.get_attribute('href')
         except NoSuchElementException:
-            job_data['apply_url'] = url
+            # Fallback to just looking for the ID
+            try:
+                apply_button = driver.find_element(By.ID, 'job-cta-alt')
+                job_data['apply_url'] = apply_button.get_attribute('href')
+            except NoSuchElementException:
+                job_data['apply_url'] = url
         
         job_data['apply_before'] = get_text_safely(driver, '.lis-container__job__sidebar__job-about__list__item span') or 'Not specified'
         
@@ -309,15 +339,14 @@ def process_json_job_data(json_data, url, existing_driver=None):
         'title': json_data.get('title', ''),
         'company': json_data.get('hiringOrganization', {}).get('name', '') if isinstance(json_data.get('hiringOrganization'), dict) else '',
         'company_about': '',  # Will extract from page later
-        'apply_url': json_data.get('applicationLink', '') or json_data.get('url', url),
+        'apply_url': '',  # Will extract from page later
         'apply_before': json_data.get('validThrough', 'Not specified'),
         'job_description': json_data.get('description', ''),
         'category': json_data.get('occupationalCategory', 'All Other Remote Jobs'),
-        'region': '',  # Will extract from page
+        'region': [],  # Will extract from page as a list
         
         # Optional fields that will be extracted from the page
-        'salary_range': f"{json_data.get('baseSalary', {}).get('value', 'Not Specified')} {json_data.get('baseSalary', {}).get('currency', '')}" 
-                    if isinstance(json_data.get('baseSalary'), dict) else 'Not Specified',
+        'salary_range': '',  # Will extract from page later
         'countries': [],
         'skills': [],
         'timezones': [],
@@ -346,9 +375,23 @@ def process_json_job_data(json_data, url, existing_driver=None):
         # Extract additional information from the page
         job_data['company_about'] = get_text_safely(driver, '.lis-container__header__hero__company-info__description')
         job_data['region'] = extract_region(driver)
+        job_data['salary_range'] = extract_salary(driver)
         job_data['countries'] = extract_countries(driver)
         job_data['skills'] = extract_skills(driver)
         job_data['timezones'] = extract_timezones(driver)
+        
+        # Extract apply URL from the correct element
+        try:
+            # Updated selector to match the element structure you provided
+            apply_button = driver.find_element(By.CSS_SELECTOR, ".listing-apply-cta__btn #job-cta-alt")
+            job_data['apply_url'] = apply_button.get_attribute('href')
+        except NoSuchElementException:
+            # Fallback to just looking for the ID
+            try:
+                apply_button = driver.find_element(By.ID, 'job-cta-alt')
+                job_data['apply_url'] = apply_button.get_attribute('href')
+            except NoSuchElementException:
+                job_data['apply_url'] = url
         
     except Exception as e:
         print(f"Error extracting additional info: {e}")
@@ -357,6 +400,16 @@ def process_json_job_data(json_data, url, existing_driver=None):
             driver.quit()
     
     return job_data
+
+def exists_in_firestore(job_id):
+    """Check if a job with this ID already exists in Firestore"""
+    try:
+        doc_ref = db.collection('jobs').document(job_id)
+        return doc_ref.get().exists
+    except Exception as e:
+        print(f"Error checking job existence: {e}")
+        # In case of error, return False to allow scraping attempt
+        return False
 
 def save_to_firestore(job_data, dry_run=False):
     """Save job data to Firestore, avoiding duplicates"""
@@ -368,7 +421,8 @@ def save_to_firestore(job_data, dry_run=False):
             pprint.pprint(job_data, indent=2)
             return True
         
-        # Check if document already exists
+        # Document existence should already be checked before this function is called
+        # but we'll double-check to be safe
         doc_ref = db.collection('jobs').document(doc_id)
         if not doc_ref.get().exists:
             doc_ref.set(job_data)
@@ -404,9 +458,21 @@ def test_scrape(test_urls=None, dry_run=False):
             print(f"\n--- Processing URL {i}/{len(test_urls)} ---")
             print(f"URL: {url}")
             
+            # Initialize start_time before the try block
+            start_time = time.time()
+            
             try:
+                # Extract job_id from URL first
+                parsed_url = urlparse(url)
+                job_id = parsed_url.path.split('/')[-1]
+                print(f"Job ID: {job_id}")
+                
+                # Check if job already exists in database to avoid unnecessary processing
+                if not dry_run and exists_in_firestore(job_id):
+                    print(f"⏩ Skipping - Job {job_id} already exists in database")
+                    continue
+                
                 # Extraction
-                start_time = time.time()
                 raw_data = extract_job_data(url, driver)
                 
                 if not raw_data:
@@ -462,19 +528,38 @@ def main():
         # Track progress
         successful = 0
         failed = 0
+        skipped = 0
         
         for i, url in enumerate(job_urls, 1):
             print(f"\nProcessing URL {i}/{len(job_urls)}: {url}")
+            
+            # Initialize start_time at the beginning of each iteration
+            start_time = time.time()
+            
             try:
+                # Extract job_id from URL first
+                parsed_url = urlparse(url)
+                job_id = parsed_url.path.split('/')[-1]
+                
+                # Check if job already exists in database
+                if exists_in_firestore(job_id):
+                    print(f"⏩ Skipping - Job {job_id} already exists in database")
+                    skipped += 1
+                    # Calculate time even for skipped jobs
+                    elapsed_time = time.time() - start_time
+                    print(f"⏱ Skipping time: {elapsed_time:.2f}s")
+                    continue
+                    
+                # Process the job only if it doesn't exist
                 raw_data = extract_job_data(url, driver)
                 if raw_data:
                     try:
                         validated_data = validate_job_data(raw_data)
                         if save_to_firestore(validated_data):
                             successful += 1
-                        # Still count as successful if already exists
                         else:
-                            successful += 1
+                            # This should rarely happen since we check existence first
+                            skipped += 1
                     except ValueError as e:
                         print(f"Skipping invalid job data: {e}")
                         failed += 1
@@ -483,20 +568,26 @@ def main():
                         failed += 1
                 else:
                     failed += 1
+                    
             except Exception as e:
                 print(f"Error processing {url}: {e}")
                 failed += 1
+                
+            finally:
+                # Calculate and print elapsed time for all jobs
+                elapsed_time = time.time() - start_time
+                print(f"⏱ Total processing time: {elapsed_time:.2f}s")
                 
             # Add a small delay between requests to be respectful
             time.sleep(3)
             
             # Periodic status update
             if i % 10 == 0:
-                print(f"\n--- Progress: {i}/{len(job_urls)} URLs processed. Success: {successful}, Failed: {failed} ---\n")
+                print(f"\n--- Progress: {i}/{len(job_urls)} URLs processed. Success: {successful}, Failed: {failed}, Skipped: {skipped} ---\n")
                 
     finally:
         driver.quit()
-        print(f"\nScraping completed. Processed {len(job_urls)} URLs. Success: {successful}, Failed: {failed}")
+        print(f"\nScraping completed. Processed {len(job_urls)} URLs. Success: {successful}, Failed: {failed}, Skipped: {skipped}")
 
 if __name__ == "__main__":
     import argparse

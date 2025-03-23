@@ -4,7 +4,9 @@
 
 ALLOWED_CATEGORIES = {
     "Programming",
-    "Design",
+    "Full-Stack Programming",
+    "Front-End Programming",
+    "Back-End Programming",
     "DevOps and Sysadmin",
     "Management and Finance",
     "Product",
