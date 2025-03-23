@@ -128,7 +128,7 @@ def save_to_firestore(job_data, dry_run=False):
         doc_id = parsed_url.path.split('/')[-1]
         
         if dry_run:
-            print("🚨 Dry Run: Would save to Firestore:")
+            print("🚨 Dry Run: Would NOT save to Firestore:")
             pprint.pprint(job_data, indent=2)
             return True
         
@@ -154,8 +154,10 @@ def test_scrape(test_urls=None, dry_run=False):
     
     if not test_urls:
         test_urls = [
-            "https://weworkremotely.com/remote-jobs/example-job-1",
-            "https://weworkremotely.com/remote-jobs/example-job-2"
+            "https://weworkremotely.com/remote-jobs/clipboard-health-collections-account-manager-2",
+            "https://weworkremotely.com/remote-jobs/laudio-staff-software-engineer",
+            "https://weworkremotely.com/remote-jobs/soflyy-wordpress-developer-technical-writer",
+            "https://weworkremotely.com/remote-jobs/maverick-trading-equity-option-trader-at-maverick-trading"
         ]
     
     try:
