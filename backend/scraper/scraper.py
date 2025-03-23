@@ -15,14 +15,13 @@ from bs4 import BeautifulSoup
 import firebase_admin
 from firebase_admin import credentials, firestore
 from pathlib import Path
-from .schema import validate_job_data
-
+from schema import validate_job_data  
+import pprint
 
 
 # Load environment variables from .env file
 dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
-# Load environment variables
-load_dotenv()
+load_dotenv(dotenv_path)
 
 # Firebase initialization
 firebase_cred = {
@@ -75,44 +74,63 @@ def extract_job_data(url, driver):
     try:
         driver.get(url)
         WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'listing-header-container'))
+            EC.presence_of_element_located((By.CLASS_NAME, 'listing-header-container')))
         
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         parsed_url = urlparse(url)
         
-        # Extract category from URL (example: /categories/2-programming)
-        category = "Other"
+        # Extract category from URL
+        category = "All Other Remote Jobs"
         url_parts = parsed_url.path.split('/')
         if len(url_parts) > 2 and url_parts[1] == 'categories':
-            category = url_parts[2].split('-')[1].title()
+            raw_category = '-'.join(url_parts[2].split('-')[1:])  # Handle multi-word categories
+            category = raw_category.title().replace('And', 'and')  # Maintain 'and' lowercase
+            
+        # Extract company info
+        company_section = soup.find('div', class_='company-card')
         
+        # Extract main job details
         job_data = {
             'job_id': parsed_url.path.split('/')[-1],
             'title': soup.find('h1', class_='listing-header-container').get_text(strip=True),
-            'company': soup.find('h2', class_='company').get_text(strip=True) if soup.find('h2', class_='company') else '',
-            'location': soup.find('h3', class_='location').get_text(strip=True) if soup.find('h3', class_='location') else 'Remote',
-            'description': soup.find('div', id='job-description').get_text(strip=True) if soup.find('div', id='job-description') else '',
-            'url': url,
-            'posted_at': firestore.SERVER_TIMESTAMP,
-            'source': 'WeWorkRemotely',
+            'company': soup.find('h2', class_='company').get_text(strip=True),
+            'company_about': company_section.get_text(strip=True) if company_section else '',
+            'apply_url': soup.find('a', class_='apply')['href'] if soup.find('a', class_='apply') else '',
+            'posted_on': soup.find('time').get('datetime') if soup.find('time') else '',
+            'apply_before': soup.find('span', class_='deadline').get_text(strip=True) if soup.find('span', class_='deadline') else '',
+            'job_description': soup.find('div', id='job-description').get_text(strip=True),
             'category': category,
-            'active': True,
-            # Optional fields
-            'salary_range': soup.find('span', class_='salary').get_text(strip=True) if soup.find('span', class_='salary') else 'Not Specified',
-            'tags': [tag.get_text(strip=True) for tag in soup.find_all('li', class_='tag')],
-            'application_email': soup.find('a', class_='apply')['href'].split('mailto:')[-1] if soup.find('a', class_='apply') else ''
+            'region': soup.find('h3', class_='location').get_text(strip=True) if soup.find('h3', class_='location') else 'Remote',
+            
+            # Optional fields with defaults
+            'salary_range': soup.find('li', class_='salary').get_text(strip=True) if soup.find('li', class_='salary') else 'Not Specified',
+            'countries': [c.get_text(strip=True) for c in soup.select('.country-list li')],
+            'skills': [s.get_text(strip=True) for s in soup.select('.skills-list li')],
+            'timezones': [t.get_text(strip=True) for t in soup.select('.timezone-list li')],
+            
+            # Metadata
+            'url': url,
+            'source': 'WeWorkRemotely',
+            'timestamp': firestore.SERVER_TIMESTAMP
         }
         
         return job_data
     except (TimeoutException, NoSuchElementException, WebDriverException) as e:
         print(f"Error scraping {url}: {e}")
         return None
+    except Exception as e:
+        print(f"Unexpected error processing {url}: {e}")
+        return None
 
-def save_to_firestore(job_data):
+def save_to_firestore(job_data, dry_run=False):
     try:
-        # Create unique ID from URL
         parsed_url = urlparse(job_data['url'])
         doc_id = parsed_url.path.split('/')[-1]
+        
+        if dry_run:
+            print("🚨 Dry Run: Would save to Firestore:")
+            pprint.pprint(job_data, indent=2)
+            return True
         
         doc_ref = db.collection('jobs').document(doc_id)
         if not doc_ref.get().exists:
@@ -120,12 +138,81 @@ def save_to_firestore(job_data):
             print(f"Saved new job: {doc_id}")
         else:
             print(f"Job already exists: {doc_id}")
+        return True
     except Exception as e:
         print(f"Firestore error: {e}")
+        return False
+
+
+def test_scrape(test_urls=None, dry_run=False):
+    """
+    Test the scraping process with specific URLs
+    Usage: test_scrape(["https://example.com/job"], dry_run=True)
+    """
+    driver = get_driver()
+    pp = pprint.PrettyPrinter(indent=2)
+    
+    if not test_urls:
+        test_urls = [
+            "https://weworkremotely.com/remote-jobs/example-job-1",
+            "https://weworkremotely.com/remote-jobs/example-job-2"
+        ]
+    
+    try:
+        print(f"\n{' DRY RUN ' if dry_run else ''} Starting test with {len(test_urls)} URLs")
+        
+        for i, url in enumerate(test_urls, 1):
+            print(f"\n--- Processing URL {i}/{len(test_urls)} ---")
+            print(f"URL: {url}")
+            
+            try:
+                # Extraction
+                start_time = time.time()
+                raw_data = extract_job_data(url, driver)
+                
+                if not raw_data:
+                    print("❌ No data extracted")
+                    continue
+                
+                # Print raw data
+                print("\nRaw extracted data:")
+                pp.pprint(raw_data)
+                
+                # Validation
+                try:
+                    validated_data = validate_job_data(raw_data)
+                    validation_time = time.time() - start_time
+                    print(f"\n✅ Validated in {validation_time:.2f}s")
+                    print("Validated data:")
+                    pp.pprint(validated_data)
+                except ValueError as e:
+                    print(f"\n❌ Validation failed: {e}")
+                    continue
+                
+                # Saving
+                if not dry_run:
+                    save_success = save_to_firestore(validated_data)
+                    print(f"💾 Save {'succeeded' if save_success else 'failed'}")
+                else:
+                    save_to_firestore(validated_data, dry_run=True)
+                
+            except Exception as e:
+                print(f"\n⚠️ Unexpected error: {str(e)}")
+                continue
+                
+            finally:
+                print(f"⏱ Total processing time: {time.time() - start_time:.2f}s")
+            
+            time.sleep(1)
+            
+    finally:
+        driver.quit()
+        print("\n🏁 Test complete")
+
 
 def main():
     driver = get_driver()
-    
+
     try:
         sitemap_url = "https://weworkremotely.com/sitemap.xml"
         job_urls = parse_sitemap(sitemap_url)
@@ -147,3 +234,22 @@ def main():
         driver.quit()
         print("Scraping completed")
 
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Job Scraper')
+    parser.add_argument('--test', action='store_true',
+                       help='Run in test mode with sample URLs')
+    parser.add_argument('--urls', nargs='+',
+                       help='Specific URLs to test')
+    parser.add_argument('--dry-run', action='store_true',
+                       help='Run without saving to Firestore')
+    
+    args = parser.parse_args()
+    
+    if args.test:
+        test_scrape(test_urls=args.urls, dry_run=args.dry_run)
+    else:
+        if args.dry_run:
+            print("⚠️ Dry run only works with --test mode")
+        main()
