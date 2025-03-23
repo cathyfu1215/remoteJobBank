@@ -1,0 +1,234 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 800px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 30px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #777;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.modal-close:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.modal-header {
+  margin-bottom: 20px;
+  padding-right: 30px;
+}
+
+.modal-header h2 {
+  font-size: 1.8rem;
+  margin: 0 0 10px 0;
+  color: var(--text-color);
+}
+
+.modal-category {
+  display: inline-block;
+  font-size: 0.9rem;
+  background-color: var(--light-gray);
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: #555;
+}
+
+.modal-company {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.modal-company h3 {
+  font-size: 1.3rem;
+  margin: 0;
+  color: var(--primary-color);
+}
+
+.modal-salary {
+  font-size: 1.1rem;
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.modal-section {
+  margin-bottom: 25px;
+}
+
+.modal-section h4 {
+  font-size: 1.1rem;
+  margin: 0 0 10px 0;
+  color: #555;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--light-gray);
+}
+
+/* Preserve formatting for job description and other text */
+.preserve-format {
+  white-space: pre-wrap; /* Preserves whitespace, wraps lines */
+  line-height: 1.6;
+  color: #444;
+  font-family: inherit;
+  word-break: break-word;
+}
+
+.job-description {
+  font-size: 0.95rem;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.modal-grid-item h4 {
+  font-size: 0.95rem;
+  margin: 0 0 5px 0;
+  color: #666;
+}
+
+.modal-grid-item p {
+  margin: 0;
+  color: #333;
+}
+
+.modal-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modal-skill-tag {
+  background-color: #e9f5ff;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  padding: 5px 10px;
+  border-radius: 15px;
+}
+
+.job-id-section {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.modal-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+}
+
+.modal-apply-btn {
+  background-color: var(--success-color);
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 12px 25px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.modal-apply-btn:hover {
+  background-color: #218838;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    padding: 20px;
+  }
+  
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Styles for rendered HTML content */
+.html-content {
+  line-height: 1.6;
+  color: #444;
+}
+
+.html-content div,
+.html-content p {
+  margin-bottom: 1em;
+}
+
+.html-content strong, 
+.html-content b {
+  font-weight: 600;
+}
+
+.html-content ul, 
+.html-content ol {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+
+.html-content li {
+  margin-bottom: 0.5em;
+}
+
+.html-content a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.html-content a:hover {
+  text-decoration: underline;
+}
+
+.html-content h1, 
+.html-content h2, 
+.html-content h3, 
+.html-content h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #333;
+}
+
+.html-content br {
+  line-height: 2;
+} 
