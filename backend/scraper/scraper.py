@@ -92,10 +92,11 @@ def extract_job_data(url, driver):
         # Extract main job details
         job_data = {
             'job_id': parsed_url.path.split('/')[-1],
-            'title': soup.find('h1', class_='listing-header-container').get_text(strip=True),
-            'company': soup.find('h2', class_='company').get_text(strip=True),
-            'company_about': company_section.get_text(strip=True) if company_section else '',
-            'apply_url': soup.find('a', class_='apply')['href'] if soup.find('a', class_='apply') else '',
+            'title': soup.select_one('.lis-container__header__hero__company-info__title').get_text(strip=True) if soup.select_one('.lis-container__header__hero__company-info__title') else '',
+            'company': soup.select_one('.lis-container__job__sidebar__companyDetails__info__title h3').get_text(strip=True) if soup.select_one('.lis-container__job__sidebar__companyDetails__info__title h3') else '',
+            'company_about': soup.select_one('.lis-container__header__hero__company-info__description').get_text(strip=True) if soup.select_one('.lis-container__header__hero__company-info__description') else '',
+            'apply_url': soup.select_one('#job-cta-alt')['href'] if soup.select_one('#job-cta-alt') else '',
+            
             'posted_on': soup.find('time').get('datetime') if soup.find('time') else '',
             'apply_before': soup.find('span', class_='deadline').get_text(strip=True) if soup.find('span', class_='deadline') else '',
             'job_description': soup.find('div', id='job-description').get_text(strip=True),
