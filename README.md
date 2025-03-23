@@ -2,7 +2,7 @@
 This is a full stack project that contains:
 - Job information scraped from [We Work Remotely](https://weworkremotely.com), stored in database with
   - well-structured schema
-  - andles duplicates
+  - handles duplicates
   - ensures data integrity
 - a RESTful API that supports filtering, pagination
 - a simple, user-friendly user interface.
