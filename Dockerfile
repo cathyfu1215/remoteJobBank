@@ -1,20 +1,41 @@
-# Use an appropriate base image for your application
-FROM node:16  # Change as needed for your language/framework
+FROM node:16-alpine as frontend-builder
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend ./
+RUN npm run build
+
+FROM python:3.8-slim
+
+# Install Node.js for serving the frontend
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg \
+    && curl -sL https://deb.nodesource.com/setup_16.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy dependency files first for better caching
-COPY package*.json ./  
-RUN npm install
+# Copy and install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install uvicorn gunicorn
 
-# Copy the rest of the application
-COPY . .
+# Copy frontend build
+COPY --from=frontend-builder /app/frontend/build /app/frontend/build
 
-# Build the application if needed
-# RUN npm run build
+# Copy backend code
+COPY backend /app/backend
 
-# Expose the port your app runs on
-EXPOSE 8000
+# Copy root files including .env
+COPY .env ./
+COPY start.sh ./
+RUN chmod +x start.sh
 
-# Command to run your application
-CMD ["npm", "start"] 
+EXPOSE 8000 3000
+
+# Run the start script
+CMD ["./start.sh"] 

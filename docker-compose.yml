@@ -1,30 +1,18 @@
 version: '3.8'
 
 services:
-  app:
+  remoteJobBank:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"  # Adjust port mapping as needed
+      - "8000:8000"  # Backend API port
+      - "3000:3000"  # Frontend port
     volumes:
-      - ./:/app
+      - .:/app
+      - /app/frontend/node_modules  # Prevents node_modules from being overwritten
     environment:
-      - NODE_ENV=development  # Customize environment variables
-    depends_on:
-      - db
-    restart: unless-stopped
-
-  db:
-    image: postgres:13  # Change to your preferred database
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=myapp
-    ports:
-      - "5432:5432"
+      - NODE_ENV=production
     restart: unless-stopped
 
 volumes:
