@@ -92,6 +92,19 @@ o GET /data/{company} → Retrieve data by company name (if applicable).
 o DELETE /data/{id} → Delete a specific entry (admin functionality).Please Implement pagination support in the API responses. Please put this file in the api folder , it is inside romotejobbank(the root of this project)/backend/api
 ```
 
+
+## Testing
+
+```
+Can you create comprehensive tests that covers at least 95% of the functions in this file?
+```
+
+# Style
+```
+Can you add doc strings to this file, explain parameters and output of each function, and follow the best practices?
+```
+
+
 ## Frontend
 
 cannot keep track of these. Mainly about telling cursor I want a stylish website that is repsonsive, and then make adjustments.
