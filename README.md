@@ -33,7 +33,12 @@ This is Cathy's full stack project that contains:
   - fetches and displays data from the API
   - provide filtering options
 
+## Screenshots
+![Screenshot 2025-03-23 at 10 39 34 PM](https://github.com/user-attachments/assets/1348e52c-17c6-4090-8fbf-c78a4b65c49a)
 
+![Screenshot 2025-03-23 at 10 40 54 PM](https://github.com/user-attachments/assets/339133ac-1321-4381-96f0-33437445d768)
+
+![Screenshot 2025-03-23 at 10 41 07 PM](https://github.com/user-attachments/assets/ab3d432d-ba35-4817-b157-105596526b91)
 
 ## Installation
 
