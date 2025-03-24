@@ -65,17 +65,17 @@ def parse_sitemap(url):
         # Define namespace if present in the XML
         ns = {'ns': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
         
-        # Check for nested sitemaps
+        # Check for nested sitemaps and job URLs
         for child in root:
             tag_name = child.tag.split('}')[-1] if '}' in child.tag else child.tag
             
             if tag_name == 'sitemap':
                 loc_element = child.find('.//ns:loc' if ns else './/loc', ns)
-                if loc_element is not None and 'job-sitemap' in loc_element.text:
+                if loc_element is not None:
                     job_urls.extend(parse_sitemap(loc_element.text))
-            elif tag_name == 'url':
+            elif tag_name in ['url', 'item']:  # Check both url and item tags
                 loc_element = child.find('.//ns:loc' if ns else './/loc', ns)
-                if loc_element is not None and '/remote-jobs/' in loc_element.text:
+                if loc_element is not None and '/listings/' in loc_element.text:  # Look for /listings/ instead of /remote-jobs/
                     job_urls.append(loc_element.text)
         
         return job_urls
