@@ -49,6 +49,12 @@ For the frontend implementation, I opted to use React based on the following con
 
 4. **Data Visualization**: The potential to implement interactive visualizations of job market trends (by location, salary ranges, or skills) is well-supported by React's integration with visualization libraries.
 
+### Docker [3h]
+
+I decided to use docker because it will significantly simplify the setup experience for users and developers alike. By containerizing the application, users can run the entire system (including the FastAPI backend, React frontend, and database) with just one or two commands, without worrying about installing dependencies, configuring environments, or resolving version conflicts. This "it just works" approach eliminates the frustration of environment setup that often plagues complex applications with multiple components.
+
+Additionally, Docker ensures consistent behavior across different operating systems, making the application accessible to a broader audience regardless of whether they use Windows, macOS, or Linux. The containerized approach also isolates the application from the host system, preventing potential conflicts with other software installed on users' machines. For developers contributing to the project, Docker provides a standardized development environment that mirrors production, reducing the "it works on my machine" problem and streamlining collaboration.
+
 ### Project Analysis and Justification
 
 This web scraping project has several characteristics that make these technology choices particularly appropriate:
