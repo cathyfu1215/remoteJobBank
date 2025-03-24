@@ -38,4 +38,4 @@ RUN chmod +x start.sh
 EXPOSE 8000 3000
 
 # Run the start script
-CMD ["./start.sh"] 
+CMD ["/bin/bash", "./start.sh"] 

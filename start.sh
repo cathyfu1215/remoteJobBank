@@ -3,6 +3,9 @@
 # Print startup message
 echo "Starting RemoteJobBank application..."
 
+# Add the /app directory to PYTHONPATH
+export PYTHONPATH=$PYTHONPATH:/app
+
 # Change to backend directory
 cd /app/backend
 
