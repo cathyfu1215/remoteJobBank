@@ -24,8 +24,9 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install uvicorn gunicorn
 
-# Copy frontend build
+# Copy frontend build from builder stage
 COPY --from=frontend-builder /app/frontend/build /app/frontend/build
+COPY frontend/package*.json /app/frontend/
 
 # Copy backend code
 COPY backend /app/backend
@@ -33,7 +34,7 @@ COPY backend /app/backend
 # Copy root files including .env
 COPY .env ./
 COPY start.sh ./
-RUN chmod +x start.sh
+RUN chmod 755 start.sh
 
 EXPOSE 8000 3000
 
