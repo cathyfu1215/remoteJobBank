@@ -51,8 +51,49 @@ remoteJobBank/                            # Root project directory
 
 ## Installation
 
+### Prerequisites
+- [Docker](https://www.docker.com/products/docker-desktop/) installed on your machine
+- [Docker Compose](https://docs.docker.com/compose/install/) (usually included with Docker Desktop)
 
-## Usage
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/remoteJobBank.git
+   cd remoteJobBank
+   ```
+
+2. **Run with Docker Compose**
+   ```bash
+   docker-compose up
+   ```
+   The first run will take a few minutes as it builds the Docker images.
+
+3. **Access the application**
+   - Frontend: [http://localhost:3000](http://localhost:3000)
+   - Backend API: [http://localhost:8000](http://localhost:8000)
+   - API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Stopping the Application
+
+To stop the application, press `Ctrl+C` in the terminal where it's running, or run:
+```bash
+docker-compose down
+```
+
+### Rebuilding After Changes
+
+If you make changes to the code and want to rebuild:
+```bash
+docker-compose up --build
+```
+
+### Troubleshooting
+
+- **Port conflicts**: If ports 3000 or 8000 are already in use on your machine, modify the `ports` section in docker-compose.yml
+- **Container crashes**: Check the logs with `docker logs remoteJobBank-app-1`
+- **Slow performance**: First run may be slower while Docker builds the image and the React app
+
 
 
 ## Disclaimer  
