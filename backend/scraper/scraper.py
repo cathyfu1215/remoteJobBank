@@ -39,10 +39,24 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--window-size=1920,1080")
 
 def get_driver():
+    """
+    Create and return a configured Chrome WebDriver instance.
+    
+    Returns:
+        webdriver.Chrome: A configured Chrome WebDriver with headless options.
+    """
     return webdriver.Chrome(options=chrome_options)
 
 def parse_sitemap(url):
-    """Parse XML sitemap to extract job URLs"""
+    """
+    Parse XML sitemap to extract job URLs.
+    
+    Args:
+        url (str): The URL of the sitemap to parse.
+        
+    Returns:
+        list: A list of job URLs extracted from the sitemap.
+    """
     job_urls = []
     try:
         response = requests.get(url, timeout=10)
@@ -70,7 +84,15 @@ def parse_sitemap(url):
         return []
 
 def check_for_json_data(driver):
-    """Try to find and extract any structured JSON data on the page"""
+    """
+    Try to find and extract structured JSON data on the page.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        dict or None: Extracted job posting JSON data if found, None otherwise.
+    """
     try:
         # Look for script tags with type="application/ld+json"
         script_elements = driver.find_elements(By.XPATH, "//script[@type='application/ld+json']")
@@ -101,7 +123,17 @@ def check_for_json_data(driver):
         return None
 
 def get_text_safely(driver, selector, wait_time=5):
-    """Safely extract text from an element using explicit wait"""
+    """
+    Safely extract text from an element using explicit wait.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        selector (str): CSS selector to locate the element.
+        wait_time (int, optional): Maximum time to wait for element. Defaults to 5.
+        
+    Returns:
+        str: The extracted text or empty string if element not found.
+    """
     try:
         element = WebDriverWait(driver, wait_time).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, selector))
@@ -111,7 +143,17 @@ def get_text_safely(driver, selector, wait_time=5):
         return ""
 
 def get_elements_safely(driver, selector, wait_time=5):
-    """Safely get multiple elements using explicit wait"""
+    """
+    Safely get multiple elements using explicit wait.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        selector (str): CSS selector to locate the elements.
+        wait_time (int, optional): Maximum time to wait for elements. Defaults to 5.
+        
+    Returns:
+        list: List of WebElement objects or empty list if none found.
+    """
     try:
         WebDriverWait(driver, wait_time).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, selector))
@@ -121,7 +163,15 @@ def get_elements_safely(driver, selector, wait_time=5):
         return []
 
 def extract_region(driver):
-    """Extract region information as a list of regions"""
+    """
+    Extract region information from the job listing.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        list: A list of region names as strings.
+    """
     regions = []
     try:
         # Look for list item containing "Region"
@@ -143,7 +193,15 @@ def extract_region(driver):
     return regions
 
 def extract_salary(driver):
-    """Extract salary information"""
+    """
+    Extract salary information from the job listing.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        str: The salary range as a string, or empty string if not found.
+    """
     try:
         # Look for list item containing "Salary"
         salary_items = driver.find_elements(By.XPATH, "//li[contains(@class, 'lis-container__job__sidebar__job-about__list__item') and contains(text(), 'Salary')]")
@@ -165,7 +223,15 @@ def extract_salary(driver):
     return ""  # Return empty string if no salary found
 
 def extract_countries(driver):
-    """Extract countries from the job listing"""
+    """
+    Extract countries information from the job listing.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        list: A list of country names as strings.
+    """
     countries = []
     try:
         # Look for list item containing "Country"
@@ -188,7 +254,15 @@ def extract_countries(driver):
     return countries
 
 def extract_skills(driver):
-    """Extract skills from the job listing"""
+    """
+    Extract skills information from the job listing.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        list: A list of skill names as strings.
+    """
     skills = []
     try:
         # Look for list item containing "Skills"
@@ -211,7 +285,15 @@ def extract_skills(driver):
     return skills
 
 def extract_timezones(driver):
-    """Extract timezones from the job listing"""
+    """
+    Extract timezones information from the job listing.
+    
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        list: A list of timezone names as strings.
+    """
     timezones = []
     try:
         # Look for list item containing "Timezones"
@@ -234,7 +316,17 @@ def extract_timezones(driver):
     return timezones
 
 def extract_job_data(url, driver):
-    """Extract job data using Selenium directly instead of BeautifulSoup"""
+    """
+    Extract complete job data from a job listing page.
+    
+    Args:
+        url (str): The URL of the job listing to scrape.
+        driver (webdriver.Chrome): The Selenium WebDriver instance.
+        
+    Returns:
+        dict or None: A dictionary containing all extracted job data,
+                     or None if extraction failed.
+    """
     try:
         driver.get(url)
         
@@ -313,7 +405,18 @@ def extract_job_data(url, driver):
         return None
 
 def process_json_job_data(json_data, url, existing_driver=None):
-    """Process structured JSON job data if available"""
+    """
+    Process structured JSON job data from a job listing.
+    
+    Args:
+        json_data (dict): The structured JSON data containing job information.
+        url (str): The URL of the job listing.
+        existing_driver (webdriver.Chrome, optional): An existing WebDriver instance.
+                                                     If None, a new instance will be created.
+    
+    Returns:
+        dict: A dictionary containing all processed job data.
+    """
     parsed_url = urlparse(url)
     job_id = parsed_url.path.split('/')[-1]
     
@@ -386,17 +489,44 @@ def process_json_job_data(json_data, url, existing_driver=None):
     return job_data
 
 def exists_in_firestore(job_id):
-    """Check if a job with this ID already exists in Firestore"""
+    """
+    Check if a job with this ID already exists in Firestore.
+    
+    Args:
+        job_id (str): The job ID to check.
+        
+    Returns:
+        bool: True if the job exists, False otherwise.
+    """
     return exists_in_collection('jobs', job_id)
 
 def save_to_firestore(job_data, dry_run=False):
-    """Save job data to Firestore, avoiding duplicates"""
+    """
+    Save job data to Firestore, avoiding duplicates.
+    
+    Args:
+        job_data (dict): The job data to save.
+        dry_run (bool, optional): If True, don't actually save data. Defaults to False.
+        
+    Returns:
+        bool: True if save was successful (or would be in dry_run mode), False otherwise.
+    """
     return save_to_collection('jobs', job_data, dry_run=dry_run)
 
 def test_scrape(test_urls=None, dry_run=False):
     """
-    Test the scraping process with specific URLs
-    Usage: test_scrape(["https://example.com/job"], dry_run=True)
+    Test the scraping process with specific URLs.
+    
+    Args:
+        test_urls (list, optional): List of URLs to test scrape. 
+                                   If None, default test URLs are used.
+        dry_run (bool, optional): If True, don't save data to Firestore. Defaults to False.
+        
+    Returns:
+        None
+    
+    Usage: 
+        test_scrape(["https://example.com/job"], dry_run=True)
     """
     driver = get_driver()
     
@@ -467,7 +597,19 @@ def test_scrape(test_urls=None, dry_run=False):
         print("\n🏁 Test complete")
 
 def main():
-    """Main function to scrape all job listings"""
+    """
+    Main function to scrape all job listings from WeWorkRemotely.
+    
+    This function:
+    1. Fetches all job URLs from the sitemap
+    2. Processes each URL to extract job data
+    3. Validates the data
+    4. Saves it to Firestore
+    5. Provides progress updates
+    
+    Returns:
+        None
+    """
     driver = get_driver()
     
     try:
