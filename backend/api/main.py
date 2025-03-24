@@ -14,6 +14,8 @@ from urllib.parse import unquote
 
 # Add parent directory to path to import scraper modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from scraper.schema import ALLOWED_CATEGORIES, validate_job_data
 
 # Load environment variables
@@ -35,30 +37,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Firebase initialization - reusing the configuration from scraper.py
-firebase_cred = {
-    "type": os.getenv("FIREBASE_TYPE"),
-    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
-    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.getenv("FIREBASE_CLIENT_ID"), 
-    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL")
-}
+# Import Firebase client
+from backend.database.firebase_client import get_firestore_client, exists_in_collection, save_to_collection
 
-# Initialize Firebase if not already initialized
-if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate(firebase_cred)
-        firebase_admin.initialize_app(cred)
-    except Exception as e:
-        print(f"Firebase initialization error: {e}")
-        # Proceed with a warning, but API will fail if Firebase ops are attempted
-        
-db = firestore.client()
+# Get Firestore client
+db = get_firestore_client()
 
 # Pydantic models for request/response validation
 class JobData(BaseModel):

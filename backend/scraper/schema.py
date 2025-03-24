@@ -3,7 +3,6 @@
 
 
 ALLOWED_CATEGORIES = {
-    "Programming",
     "Full-Stack Programming",
     "Front-End Programming",
     "Back-End Programming",

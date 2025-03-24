@@ -12,36 +12,23 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException, StaleElementReferenceException
-import firebase_admin
-from firebase_admin import credentials, firestore
 from pathlib import Path
-from schema import validate_job_data
+from backend.scraper.schema import validate_job_data
 import pprint
 import re
+
+# Import Firebase client
+from backend.database.firebase_client import get_firestore_client, exists_in_collection, save_to_collection
+
+# Import firestore from firebase_admin
+from firebase_admin import firestore
+
+# Get Firestore client
+db = get_firestore_client()
 
 # Load environment variables from .env file
 dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
 load_dotenv(dotenv_path)
-
-# Firebase initialization
-firebase_cred = {
-    "type": os.getenv("FIREBASE_TYPE"),
-    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
-    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.getenv("FIREBASE_CLIENT_ID"), 
-    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL")
-}
-
-# Initialize Firebase if not already initialized
-if not firebase_admin._apps:
-    cred = credentials.Certificate(firebase_cred)
-    firebase_admin.initialize_app(cred)
-db = firestore.client()
 
 # Configure Chrome options for headless mode
 chrome_options = Options()
@@ -400,36 +387,11 @@ def process_json_job_data(json_data, url, existing_driver=None):
 
 def exists_in_firestore(job_id):
     """Check if a job with this ID already exists in Firestore"""
-    try:
-        doc_ref = db.collection('jobs').document(job_id)
-        return doc_ref.get().exists
-    except Exception as e:
-        print(f"Error checking job existence: {e}")
-        # In case of error, return False to allow scraping attempt
-        return False
+    return exists_in_collection('jobs', job_id)
 
 def save_to_firestore(job_data, dry_run=False):
     """Save job data to Firestore, avoiding duplicates"""
-    try:
-        doc_id = job_data['job_id']
-        
-        if dry_run:
-            print(f"🚨 Dry Run: Would save job {doc_id}")
-            return True
-        
-        # Document existence should already be checked before this function is called
-        # but we'll double-check to be safe
-        doc_ref = db.collection('jobs').document(doc_id)
-        if not doc_ref.get().exists:
-            doc_ref.set(job_data)
-            print(f"✅ Saved job: {doc_id}")
-            return True
-        else:
-            print(f"⏩ Job already exists: {doc_id}")
-            return False
-    except Exception as e:
-        print(f"❌ Firestore error: {e}")
-        return False
+    return save_to_collection('jobs', job_data, dry_run=dry_run)
 
 def test_scrape(test_urls=None, dry_run=False):
     """
