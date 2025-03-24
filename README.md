@@ -15,40 +15,37 @@ This is a full stack project that contains:
 
 ## Repo Structure 
 ```
-remoteJobBank/
-├── README.md                # Main project documentation and setup instructions
-├── design-choices.md        # Document explaining design choices and time spent
-├── ai-prompts.md            # Documentation of AI tools used
-├── docker-compose.yml       # For easy setup and demonstration
-│
-├── backend/                 # FastAPI backend and scraper
-│   ├── README.md            # Backend-specific instructions
-│   ├── requirements.txt     # Python dependencies
-│   ├── main.py              # FastAPI application entry point
-│   ├── scraper/             # Selenium scraping code
-│   │   └── scraper.py       # Main scraper implementation
-│   │
-│   ├── database/            # Database models and connections
-│   │   └── firebase.py      # Firebase connection and operations
-│   │
-│   └── api/                 # FastAPI routes
-│       └── routes.py        # API endpoints
-│
-└── frontend/                # React frontend
-    ├── README.md            # Frontend-specific instructions
-    ├── package.json         # JavaScript dependencies
-    ├── public/              # Static assets
-    │   └── index.html       # HTML entry point
-    │
-    └── src/                 # React source code
-        ├── index.js         # JavaScript entry point
-        ├── App.js           # Main application component
-        ├── components/      # Reusable UI components
-        │   ├── JobCard.jsx  # Job listing component
-        │   └── JobFilter.jsx# Filtering component
-        │
-        └── services/        # API client
-            └── api.js       # Backend API integration
+remoteJobBank/                            # Root project directory
+├── backend/                              # FastAPI backend application
+│   ├── __pycache__/                      
+│   ├── api/                              # API endpoints and routing
+│   │   ├── __pycache__/                  
+│   │   └── main.py                       # FastAPI application endpoints
+│   ├── database/                         # Database connection and operations
+│   │   ├── __pycache__/                  
+│   │   ├── __init__.py                   
+│   │   ├── firebase_client.py            # Firebase connection and operations
+│   │   └── test_firebase.py              # Tests for Firebase operations
+│   ├── models/                           # Data models/schemas
+│   │   └── __pycache__/                  
+│   ├── scraper/                          # Web scraping module
+│   │   ├── __pycache__/                  
+│   │   ├── schema.py                     # Database schema definitions
+│   │   └── scraper.py                    # Main scraper implementation
+│   └── utils/                            
+├── frontend/                             # React frontend application
+│   ├── public/                           # Static assets
+│   │   └── index.html                    # HTML entry point
+│   ├── src/                              # React source code
+│   │   ├── components/                   # Reusable UI components
+│   │   ├── context/                      # React context providers
+│   │   ├── services/                     # API client and services
+│   │   ├── App.css                       # Main component styles
+│   │   ├── App.js                        # Main application component
+│   │   ├── index.css                     # Global styles
+│   │   └── index.js                      # JavaScript entry point
+│   ├── package-lock.json                 # NPM dependency lock file
+│   └── package.json                      # JavaScript dependencies
 ```
 
 
