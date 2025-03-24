@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  remoteJobBank:
+  remotejobbank:
     build:
       context: .
       dockerfile: Dockerfile
