@@ -18,6 +18,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from scraper.schema import ALLOWED_CATEGORIES, validate_job_data
 
+"""Remote Job Bank API Module.
+
+This module provides a FastAPI application that serves as an API for retrieving
+and managing remote job listings. It connects to a Firestore database to store
+and retrieve job data.
+
+Typical usage:
+    uvicorn backend.api.main:app --reload
+"""
+
 # Load environment variables
 dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
 load_dotenv(dotenv_path)
@@ -43,8 +53,30 @@ from backend.database.firebase_client import get_firestore_client, exists_in_col
 # Get Firestore client
 db = get_firestore_client()
 
-# Pydantic models for request/response validation
 class JobData(BaseModel):
+    """Schema for job posting data.
+    
+    This Pydantic model defines the structure and validation rules for job data
+    in the API requests and responses.
+    
+    Attributes:
+        job_id: Unique identifier for the job posting.
+        title: The job title.
+        company: The name of the hiring company.
+        company_about: Short description of the company.
+        apply_url: URL where users can apply for the job.
+        apply_before: Deadline for job applications.
+        job_description: Detailed description of the job.
+        category: Job category (must be one of the allowed categories).
+        region: Geographic region(s) where the job is available.
+        salary_range: The salary range for the position (default: "Not Specified").
+        countries: List of countries where the job is available.
+        skills: List of required skills for the job.
+        timezones: List of accepted time zones for the job.
+        url: Optional original URL where the job was found.
+        source: Optional source of the job listing.
+        timestamp: Optional timestamp when the job was scraped or added.
+    """
     job_id: str
     title: str
     company: str
@@ -62,15 +94,40 @@ class JobData(BaseModel):
     source: Optional[str] = None
     timestamp: Optional[datetime] = None
 
+
 class PaginatedResponse(BaseModel):
+    """Schema for paginated response data.
+    
+    This model defines the structure for paginated API responses.
+    
+    Attributes:
+        items: List of items (jobs) for the current page.
+        total: Total number of items across all pages.
+        page: Current page number.
+        size: Number of items per page.
+        pages: Total number of pages.
+    """
     items: List[JobData]
     total: int
     page: int
     size: int
     pages: int
 
-# Admin authentication middleware - you should enhance this with proper auth
+
 async def admin_required(api_key: str = Query(..., alias="api_key")):
+    """Dependency for admin authentication.
+    
+    Verifies that the request includes a valid admin API key.
+    
+    Args:
+        api_key: The API key provided in the request query parameter.
+        
+    Returns:
+        bool: True if authentication is successful.
+        
+    Raises:
+        HTTPException: If the API key is invalid, with a 403 status code.
+    """
     admin_key = os.getenv("ADMIN_API_KEY", "default_admin_key")
     if api_key != admin_key:
         raise HTTPException(
@@ -79,8 +136,22 @@ async def admin_required(api_key: str = Query(..., alias="api_key")):
         )
     return True
 
-# Helper function for pagination
+
 def paginate_results(items: List[Dict], page: int = 1, size: int = 10) -> Dict[str, Any]:
+    """Paginates a list of items.
+    
+    Takes a list of items and returns a paginated subset based on the
+    requested page and page size.
+    
+    Args:
+        items: The full list of items to paginate.
+        page: The requested page number (starting from 1).
+        size: The number of items per page.
+        
+    Returns:
+        Dict containing the paginated items, total count, current page,
+        page size, and total number of pages.
+    """
     total = len(items)
     pages = (total + size - 1) // size  # Ceiling division
     
@@ -95,14 +166,23 @@ def paginate_results(items: List[Dict], page: int = 1, size: int = 10) -> Dict[s
         "pages": pages
     }
 
-# Routes
+
 @app.get("/data", response_model=PaginatedResponse)
 async def get_all_jobs(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(10, ge=1, le=100, description="Items per page")
 ):
-    """
-    Retrieve all scraped job data with pagination.
+    """Retrieve all scraped job data with pagination.
+    
+    Args:
+        page: The page number to retrieve (starting from 1).
+        size: The number of items per page (between 1 and 100).
+        
+    Returns:
+        A PaginatedResponse object containing the requested jobs and pagination metadata.
+        
+    Raises:
+        HTTPException: If there's an error retrieving data from Firestore.
     """
     try:
         # Get all documents from the 'jobs' collection
@@ -122,14 +202,29 @@ async def get_all_jobs(
             detail=f"Error retrieving data: {str(e)}"
         )
 
+
 @app.get("/data/{param}", response_model=PaginatedResponse)
 async def get_filtered_data(
     param: str = FastAPIPath(..., description="Category or company name"),
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(10, ge=1, le=100, description="Items per page")
 ):
-    """
-    Retrieve job data filtered by category or company name.
+    """Retrieve job data filtered by category or company name.
+    
+    This endpoint handles two types of filtering:
+    1. If param matches a valid category, it returns all jobs in that category
+    2. If param doesn't match a category, it's treated as a company name search
+    
+    Args:
+        param: The category or company name to filter by.
+        page: The page number to retrieve (starting from 1).
+        size: The number of items per page (between 1 and 100).
+        
+    Returns:
+        A PaginatedResponse object containing the filtered jobs and pagination metadata.
+        
+    Raises:
+        HTTPException: If there's an error retrieving or filtering data.
     """
     try:
         # Decode URL parameter and normalize it
@@ -170,13 +265,25 @@ async def get_filtered_data(
             detail=f"Error retrieving data: {str(e)}"
         )
 
+
 @app.delete("/data/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_job(
     job_id: str = FastAPIPath(..., description="Job ID to delete"),
     _: bool = Depends(admin_required)
 ):
-    """
-    Delete a specific job entry (admin functionality).
+    """Delete a specific job entry (admin functionality).
+    
+    This endpoint requires admin authentication via API key.
+    
+    Args:
+        job_id: The unique identifier of the job to delete.
+        _: Result of admin_required dependency (not used directly).
+        
+    Returns:
+        None on successful deletion.
+        
+    Raises:
+        HTTPException: If the job doesn't exist (404) or there's an error during deletion (500).
     """
     try:
         # Get the job document reference
@@ -203,7 +310,7 @@ async def delete_job(
             detail=f"Error deleting job: {str(e)}"
         )
 
-# Add a search endpoint for more flexible querying
+
 @app.get("/data/search", response_model=PaginatedResponse)
 async def search_jobs(
     title: Optional[str] = Query(None, description="Search in job title"),
@@ -212,9 +319,27 @@ async def search_jobs(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(10, ge=1, le=100, description="Items per page")
 ):
-    """
-    Search for jobs based on various criteria.
-    Note: This is a simple implementation. For production, consider using a proper search engine.
+    """Search for jobs based on various criteria.
+    
+    This endpoint allows searching job listings by title, description, or skills.
+    Multiple filters can be applied simultaneously (logical AND).
+    
+    Args:
+        title: Text to search for in job titles.
+        description: Text to search for in job descriptions.
+        skills: Text to search for in job required skills.
+        page: The page number to retrieve (starting from 1).
+        size: The number of items per page (between 1 and 100).
+        
+    Returns:
+        A PaginatedResponse object containing the matching jobs and pagination metadata.
+        
+    Raises:
+        HTTPException: If there's an error during the search process.
+        
+    Note:
+        This implementation fetches all data and filters in memory. For production,
+        consider using a proper search engine for better performance.
     """
     try:
         # Start with the base collection
@@ -257,13 +382,16 @@ async def search_jobs(
             detail=f"Error searching jobs: {str(e)}"
         )
 
-# Health check endpoint
+
 @app.get("/health")
 async def health_check():
-    """
-    Health check endpoint to verify API is running.
+    """Health check endpoint to verify API is running.
+    
+    Returns:
+        Dict containing status ("healthy") and current timestamp.
     """
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 
 if __name__ == "__main__":
     import uvicorn
