@@ -76,7 +76,7 @@ This is Cathy's full stack project that contains:
     and save the .env
 4. **Run with Docker Compose**
    ```bash
-   docker-compose up -- build
+   docker-compose up --build
    ```
    The first run will take a few minutes as it builds the Docker images.
 
