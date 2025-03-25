@@ -77,7 +77,9 @@ This is Cathy's full stack project that contains:
  
    ```
     and save the .env
-4. **Run with Docker Compose**
+
+   Note: I admit this is terrible design choices to put my keys here. I will rotate my credentials in one week. Please only use it when you are my potential employer :)
+5. **Run with Docker Compose**
    ```bash
    docker-compose up --build
    ```
