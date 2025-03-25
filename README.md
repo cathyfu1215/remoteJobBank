@@ -53,10 +53,30 @@ This is Cathy's full stack project that contains:
    git clone https://github.com/cathyfu1215/remoteJobBank.git
    cd remoteJobBank
    ```
-
-2. **Run with Docker Compose**
+2. **Create ```.env``` file**
+   ```
+   # Create new .env file in the ROOT folder
+    touch .env  # Linux/macOS
+   # Windows users: Right-click → New → Text Document → Rename to ".env"
+   
+   ```
+3. **Add firebase credentials to the ```.env``` file**
+   ```
+   # .env
+   FIREBASE_TYPE=service_account
+    FIREBASE_PROJECT_ID=remotejobbank
+    FIREBASE_PRIVATE_KEY_ID=05dbca93ee50635533d1c5196bbc42b726738447
+    FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@remotejobbank.iam.gserviceaccount.com
+    FIREBASE_CLIENT_ID=108196420774828988584
+    FIREBASE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+    FIREBASE_TOKEN_URI=https://oauth2.googleapis.com/token
+    FIREBASE_AUTH_PROVIDER_X509_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+    FIREBASE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40remotejobbank.iam.gserviceaccount.com
+   ```
+    and save the .env
+4. **Run with Docker Compose**
    ```bash
-   docker-compose up
+   docker-compose up -- build
    ```
    The first run will take a few minutes as it builds the Docker images.
 
@@ -82,7 +102,6 @@ docker-compose up --build
 ### Troubleshooting
 
 - **Port conflicts**: If ports 3000 or 8000 are already in use on your machine, modify the `ports` section in docker-compose.yml
-- **Container crashes**: Check the logs with `docker logs remoteJobBank-app-1`
 - **Slow performance**: First run may be slower while Docker builds the image and the React app
 
 
