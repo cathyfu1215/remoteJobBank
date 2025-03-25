@@ -50,7 +50,7 @@ This is Cathy's full stack project that contains:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/remoteJobBank.git
+   git clone https://github.com/cathyfu1215/remoteJobBank.git
    cd remoteJobBank
    ```
 
