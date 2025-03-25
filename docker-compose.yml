@@ -6,12 +6,6 @@ services:
     ports:
       - "8000:8000"  # Backend API port
       - "3000:3000"  # Frontend port
-    volumes:
-      - .:/app
-      - /app/frontend/node_modules  # Prevents node_modules from being overwritten
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
     restart: unless-stopped
-
-volumes:
-  postgres_data: 
