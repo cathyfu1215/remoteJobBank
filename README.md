@@ -60,25 +60,27 @@ This is Cathy's full stack project that contains:
    # Windows users: Right-click → New → Text Document → Rename to ".env"
    
    ```
-3. **Add firebase credentials to the ```.env``` file**
+3. **Add your firebase credentials to the ```.env``` file**
+   The .env file should look like: 
    ```
-   
-   # .env
-   FIREBASE_TYPE=service_account
-    FIREBASE_PROJECT_ID=remotejobbank
-    FIREBASE_PRIVATE_KEY_ID=05dbca93ee50635533d1c5196bbc42b726738447
-    FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCR7MZ/A1/6cQGT\n9WwNyrwGP82DQYkP/AHCpncSgtpzJYNpLfMJcIDvk3sKHWOdnXNrTD44ZFUeQGM1\n6guwriNyLThuwbvu0FMDR7DiQHXHsXuD38u1H8Sbc7LQdjluvHfsHIocctGUNzo0\nBxLATVvUtD3L5L72xZWoRxMAGGT9awpj5nbmxl/TH/Xt9ZSowZf7G1XthQkGGHsj\nx6jpRLkmIa8MbEXosb1eTECHXcgb6hjeIvTkJ+cMWgGxsjJLCXI/lpjWRCNJyVpe\nHyMjZsTPEQRi86i7CxQtxXyMoZxx8s6qEU2ELKfBOJttMf3IWbh6V3Dn8Is6AUfD\nJZ12GwopAgMBAAECggEACJasPyUCdOHKUzxGYhBs3RxLuv40NDfjnaKBDxqbA1xx\nndLpw0Q3HoKqYvfEWW4/MRFBdz22gcuN20o9amZxaSKut9wYtM9Xl3GUgFiFZh20\n1JfrLCukvXaDj3/p1PHsR/4NBewfGC9g8ld5O87BySTbn0DFGY6bBpa6UE7fQMgB\nhedj4qdwdu6YRq50+5LPIg+2441CRKMxAaD2I7EnXv+Gm0HZnTg4VRl2O2GI9eeR\nKybdZLLU+iYWbxUlV8AyTAsuZY1wVzIVVrPMnRpb5BHfJkwmsLOtk3mjE5vaKhTL\nfqW4IIGO6aDsBo3NLoRGYgpBY0i3D2q312ym/susoQKBgQDIjdDlVDtAnjbF2JS9\n/3MbIGtQ0vb2s21Ms0H/9RrvcrCVWItJqGQrnQoBpjAKGYq+rD7S9H8tHPeDvnKV\nKpZBDEwSqiUqBtm6qCV8PPPHEU8JHJyDNKoVgJcgJhetKcYJM7jGEv9Z6L8DxHup\npxKYOZ9saJ3FkpTE15mYxkvRcQKBgQC6RJf2rpRF27lnv5TcTPf2bvLKO9h3Tzye\nVQw0UUaBMyiE/DTzOG7IiZsXUVthj9oL2VHz8EZOhNekv3WLDFZzkc0kLif5ROYh\ngjtV+GMYqI1ac92o6UKYn+0qwdVcaa1WtrFHXWuHrGJR7ITm0QZKZHt2COHBvv/Z\nVsyEapvoOQKBgQC3YJSlXENhbkj+1m4K3ExPfXEi0gNmx+EkxLOQanlagC/eHrwd\neY8+IbVIlMBQO9KVTcGT+mNeyKG5IKZ8phgFGk1ks5aPuvvSpHTCCKmOV9FAr5yc\ni8cJKi8FAk+b0hp1x4kn867wctRViY7ZLR7febC/21iHkuPcqJaVDpu8wQKBgAIE\nmDjd71FKbhnHo483bkBHN24lc9TnENsORNGUR9VCfp/iM5im9dxKUVnRUdIewtf6\nBL9FzR0wpz1rrZRSD+W0oKpRrbEvo+adCJOH21r7CH0AYFhiHoyUvvcFnpAfvPcB\nh64kPvP7VB1bGJ1/ijfoGsZOllOJBDCQliqhFQtRAoGBAMF1fKNwyl/a6rUjbosI\n51qWSW6jNI3vBIrQ3IEhPyNZZ6mhh60bN2ygoUKeUKOfvL9Z9MZiY2pwIoqzreSy\nhrI3GZf6x7RZIbBJDUC4wn2egka/6gjRA+LVGTt++k5kfgnEBX8CQSroGy7RP4I2\nOjSFxKxJpaQh4iXokrozUF8e\n-----END PRIVATE KEY-----\n
-    FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@remotejobbank.iam.gserviceaccount.com
-    FIREBASE_CLIENT_ID=108196420774828988584
+   # .env.example
+
+    FIREBASE_TYPE=service_account
+    FIREBASE_PROJECT_ID=your_project_id
+    FIREBASE_PRIVATE_KEY_ID=your_private_key_id
+    FIREBASE_PRIVATE_KEY=your_private_key
+    FIREBASE_CLIENT_EMAIL=your_client_email
+    FIREBASE_CLIENT_ID=your_client_id
     FIREBASE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
     FIREBASE_TOKEN_URI=https://oauth2.googleapis.com/token
     FIREBASE_AUTH_PROVIDER_X509_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
-    FIREBASE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40remotejobbank.iam.gserviceaccount.com
+    FIREBASE_CLIENT_X509_CERT_URL=your_client_x509_cert_url
+
  
    ```
     and save the .env
 
-   Note: I admit this is terrible design choices to put my keys here. I will rotate my credentials in one week. Please only use it when you are my potential employer :)
+   
 5. **Run with Docker Compose**
    ```bash
    docker-compose up --build
